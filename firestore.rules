@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow users to read their own user data
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rules for the 'registrations' collection
+    match /registrations/{registrationId} {
+      // Admins and Super Admins can read all registrations
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superAdmin'];
+      
+      // Any authenticated user can create a registration
+      allow create: if request.auth != null;
+
+      // Admins and Super Admins can update (e.g., verify payment)
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superAdmin'];
+
+      // Only Super Admins can delete a registration
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin';
+    }
+  }
+}
